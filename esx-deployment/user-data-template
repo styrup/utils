@@ -1,0 +1,13 @@
+#cloud-config
+hostname: HOSTNAME
+password: asdfqwer
+chpasswd: { expire: False }
+ssh_pwauth: True
+users:
+  - default
+  - name: styrup
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    groups: sudo
+    shell: /bin/bash
+    ssh_authorized_keys:
+     - ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAmuDpVTBKcHBR1lD+keeNmoIz7ExQkWDYjexYfUM7o4oYcMKVrGWHhoN8COdIyD2+2pBbDb06jP7rAIJkTaI4Li7rxrdp5a3pr52sBqUq+XB1K3ADP/mIvlF3Py7/ebXJLs2bEPeUaoA5hPdwzjMaXjH3QnxKysbqQ0KTF4WJpeRaXmGEiJ7/GxiIjq1wdlAaVMu+9CCnVq44pOHxMtSvaYR3Ngs7/9TT1gRT/vZXhyBuXNf8EWrrR4RIEBLvcPWD7ixHNEd44cjARifD4698uqMpepb7DSp1EI/XZ22wBO89oOx9tKmWdeZ9w3wFTfUAGjj2eCvtvmye2KEHYxeVRw== Jacob-Private
