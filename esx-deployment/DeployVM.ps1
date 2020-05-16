@@ -4,9 +4,30 @@ param (
     [int]$diskSizeGB,
     [int]$memoryGB
 )
-#$ovfPath = "C:\tmp\Cloud-init\os\bionic-server-cloudimg-amd64\ubuntu-bionic-18.04-cloudimg.ovf'"
+<#
+Disse ting skal sættes som env for at den bliver mere docker venlig.
+$OVFPath
+    Husk at tjekke for om filen er der.
+$VMNName
+$VMUsername
+$VMUserPublicKey
+$VMUserFallbackPW
+$VMDiskSizeGB
+$VMMemoryGB
+$VMDataStoreName
+$ESXHost
+    Tjek for forbindelse.
+$ESXUser
+$ESXPW
+$ESXCloudInitDataStoreName
+
+Skift til US.
+
+#>
 $ovfPath = ".\ubuntu-bionic-18.04-cloudimg.ovf"
+
 Connect-VIServer -Server 192.168.1.200 -User root -Password VMware1!        
+## Tjek for fejl.
 
 $DirectorySeparator = $([IO.Path]::DirectorySeparatorChar)
 $vmcdfolder = "$($pwd.path)$($DirectorySeparator)$vmname-cd"
@@ -16,22 +37,22 @@ $userdatafile = "$vmcdfolder$($DirectorySeparator)user-data"
 
 mkdir $vmcdfolder
 "instance-id: iid-local01" | Out-File -FilePath $metadatafile -Encoding utf8 -Append
-"local-hostname: cloudimg"| Out-File -FilePath $metadatafile -Encoding utf8 -Append
+"local-hostname: cloudimg" | Out-File -FilePath $metadatafile -Encoding utf8 -Append
 
 $userData = Get-Content .\user-data-template
-$newUSerData = $userData | ForEach-Object {$_.replace("HOSTNAME", $vmname)}
+$newUSerData = $userData | ForEach-Object { $_.replace("HOSTNAME", $vmname) }
 [IO.File]::WriteAllLines($userdatafile, $newUSerData)
 
 
 $dataSrcFolder = "$vmcdfolder$($DirectorySeparator)"
 xorrisofs -r -J -volid cidata -o $vmisofile $dataSrcFolder
 
-#& 'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\x86\Oscdimg\oscdimg.exe' -j1 -lcidata "$vmcdfolder\" $vmisofile
-
 $SSD = Get-Datastore -Name SSD
 if ($null -eq (Get-PSDrive -Name ds -ErrorAction Ignore)) {
     New-PSDrive -Name ds -PSProvider VimDatastore -Root "\" -Location $SSD
 }
+## Tjek for fejl.
+
 Copy-DatastoreItem -Item $vmisofile -Destination ds:\cloud-init\
 
 
@@ -91,7 +112,7 @@ while ($vm.Guest.HostName.Length -eq 0) {
 }
 "Hostnavn fundet"
 
-Get-VM -Name $vmname | Select-Object -ExpandProperty Guest | fl *
+Get-VM -Name $vmname | Select-Object -ExpandProperty Guest | Format-List *
 Remove-Item -Path $vmcdfolder -Recurse -Force -Confirm:$false
 Remove-Item -Path $vmisofile -Force -Confirm:$false
 # todo:
