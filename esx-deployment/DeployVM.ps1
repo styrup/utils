@@ -1,9 +1,64 @@
+[CmdletBinding()]
 param (
-    [Parameter(Mandatory = $true)]
-    [string]$vmname,
-    [int]$diskSizeGB,
-    [int]$memoryGB
+    [Parameter()]
+    [string]
+    $OVFPath = $env:OVFPath ,
+    [Parameter()]
+    [string]
+    $VMNName = $env:VMNNAME,
+    [Parameter()]
+    [string]
+    $VMUsername = $env:VMUSERNAME,
+    [Parameter()]
+    [string]
+    $VMUserPublicKey = $env:VMUSERPUBLICKEY,
+    [Parameter()]
+    [string]
+    $VMUserFallbackPW = $env:VMUSERFALLBACKPW,
+    [Parameter()]
+    [int]
+    $VMDiskSizeGB = $env:VMDISKSIZEGB,
+    [Parameter()]
+    [int]
+    $VMMemoryGB = $env:VMMEMORYGB,
+    [Parameter()]
+    [string]
+    $VMDataStoreName = $env:VMDATASTORENAME,
+    [Parameter()]
+    [string]
+    $ESXHost = $env:ESXHOST,
+    [Parameter()]
+    [string]
+    $ESXUsername = $env:ESXUSERNAME,
+    [Parameter()]
+    [string]
+    $ESXUserPW = $env:ESXUSERPW,
+    [Parameter()]
+    [string]
+    $ESXCloudInitDataStoreName = $env:ESXCLOUDINITDATASTORENAME
+
+
+
+    
 )
+
+$ParameterList = (Get-Command -Name $MyInvocation.InvocationName).Parameters
+foreach ( $ParameterKey in $ParameterList.Keys ) {
+    $ParameterValue = (Get-Variable $ParameterKey -ErrorAction SilentlyContinue)
+    if ($null -ne $ParameterValue) {
+        if ($ParameterValue.Value -eq "") { 
+            Write-Host "Missing argument or environment variable: $ParameterKey"
+            exit 1
+        }
+    }
+}
+
+    
+    
+
+
+return
+
 <#
 Disse ting skal sættes som env for at den bliver mere docker venlig.
 $OVFPath
@@ -26,12 +81,12 @@ Skift til US.
 #>
 $ovfPath = ".\ubuntu-bionic-18.04-cloudimg.ovf"
 
-Connect-VIServer -Server 192.168.1.200 -User root -Password VMware1!        
+Connect-VIServer -Server $ESXHost -User $ESXUsername -Password $ESXUserPW
 ## Tjek for fejl.
 
 $DirectorySeparator = $([IO.Path]::DirectorySeparatorChar)
-$vmcdfolder = "$($pwd.path)$($DirectorySeparator)$vmname-cd"
-$vmisofile = "$($pwd.path)$($DirectorySeparator)$vmname-seed.iso"
+$vmcdfolder = "$($pwd.path)$($DirectorySeparator)$VMNName-cd"
+$vmisofile = "$($pwd.path)$($DirectorySeparator)$VMNName-seed.iso"
 $metadatafile = "$vmcdfolder$($DirectorySeparator)meta-data"
 $userdatafile = "$vmcdfolder$($DirectorySeparator)user-data"
 
@@ -40,14 +95,14 @@ mkdir $vmcdfolder
 "local-hostname: cloudimg" | Out-File -FilePath $metadatafile -Encoding utf8 -Append
 
 $userData = Get-Content .\user-data-template
-$newUSerData = $userData | ForEach-Object { $_.replace("HOSTNAME", $vmname) }
+$newUSerData = $userData | ForEach-Object { $_ -replace "CIHOSTNAME", $VMNName -replace "CIPASSWORD", $VMUserFallbackPW -replace "CIUSER", $VMUsername -replace "CIKEY", $VMUserPublicKey }
 [IO.File]::WriteAllLines($userdatafile, $newUSerData)
 
 
 $dataSrcFolder = "$vmcdfolder$($DirectorySeparator)"
 xorrisofs -r -J -volid cidata -o $vmisofile $dataSrcFolder
 
-$SSD = Get-Datastore -Name SSD
+$SSD = Get-Datastore -Name $ESXCloudInitDataStoreName
 if ($null -eq (Get-PSDrive -Name ds -ErrorAction Ignore)) {
     New-PSDrive -Name ds -PSProvider VimDatastore -Root "\" -Location $SSD
 }
