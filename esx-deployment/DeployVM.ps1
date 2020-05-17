@@ -5,7 +5,7 @@ param (
     $OVFPath = $env:OVFPath ,
     [Parameter()]
     [string]
-    $VMNName = $env:VMNNAME,
+    $VMName = $env:VMNAME,
     [Parameter()]
     [string]
     $VMUsername = $env:VMUSERNAME,
@@ -47,6 +47,7 @@ foreach ( $ParameterKey in $ParameterList.Keys ) {
     $ParameterValue = (Get-Variable $ParameterKey -ErrorAction SilentlyContinue)
     if ($null -ne $ParameterValue) {
         if ($ParameterValue.Value -eq "") { 
+            # Evt. lav tjek for env her, så behøver man dem ikke i toppen.
             Write-Host "Missing argument or environment variable: $ParameterKey"
             exit 1
         }
@@ -85,8 +86,8 @@ Connect-VIServer -Server $ESXHost -User $ESXUsername -Password $ESXUserPW
 ## Tjek for fejl.
 
 $DirectorySeparator = $([IO.Path]::DirectorySeparatorChar)
-$vmcdfolder = "$($pwd.path)$($DirectorySeparator)$VMNName-cd"
-$vmisofile = "$($pwd.path)$($DirectorySeparator)$VMNName-seed.iso"
+$vmcdfolder = "$($pwd.path)$($DirectorySeparator)$VMName-cd"
+$vmisofile = "$($pwd.path)$($DirectorySeparator)$VMName-seed.iso"
 $metadatafile = "$vmcdfolder$($DirectorySeparator)meta-data"
 $userdatafile = "$vmcdfolder$($DirectorySeparator)user-data"
 
@@ -95,7 +96,7 @@ mkdir $vmcdfolder
 "local-hostname: cloudimg" | Out-File -FilePath $metadatafile -Encoding utf8 -Append
 
 $userData = Get-Content .\user-data-template
-$newUSerData = $userData | ForEach-Object { $_ -replace "CIHOSTNAME", $VMNName -replace "CIPASSWORD", $VMUserFallbackPW -replace "CIUSER", $VMUsername -replace "CIKEY", $VMUserPublicKey }
+$newUSerData = $userData | ForEach-Object { $_ -replace "CIHOSTNAME", $VMName -replace "CIPASSWORD", $VMUserFallbackPW -replace "CIUSER", $VMUsername -replace "CIKEY", $VMUserPublicKey }
 [IO.File]::WriteAllLines($userdatafile, $newUSerData)
 
 
@@ -110,64 +111,63 @@ if ($null -eq (Get-PSDrive -Name ds -ErrorAction Ignore)) {
 
 Copy-DatastoreItem -Item $vmisofile -Destination ds:\cloud-init\
 
-
-Import-VApp $ovfPath -Name $vmname  -VMHost (Get-VMHost) -Datastore $SSD -Location (Get-VMHost) -DiskStorageFormat Thin
+$VMDS = Get-Datastore -Name $VMDataStoreName
+Import-VApp $ovfPath -Name $vmname  -VMHost (Get-VMHost) -Datastore $VMDS -Location (Get-VMHost) -DiskStorageFormat Thin
 # todo: her skal man bruge id eller noget.
 $vm = Get-VM -Name $vmname
-$vm | Get-CDDrive | Set-CDDrive -IsoPath "[$($SSD.Name)] cloud-init\$vmname-seed.iso" -Confirm:$false -StartConnected:$true
+$vm | Get-CDDrive | Set-CDDrive -IsoPath "[$($SSD.Name)] cloud-init\$VMName-seed.iso" -Confirm:$false -StartConnected:$true
 if ($diskSizeGB -ge 10) {
-    $vm | Get-HardDisk | Set-HardDisk -CapacityGB $diskSizeGB -Confirm:$false
+    $vm | Get-HardDisk | Set-HardDisk -CapacityGB $VMDiskSizeGB -Confirm:$false
 }
 if ($memoryGB -ge 1) {
-    $vm | VMware.VimAutomation.Core\Set-VM -MemoryGB $memoryGB -Confirm:$false
+    $vm | VMware.VimAutomation.Core\Set-VM -MemoryGB $VMMemoryGB -Confirm:$false
 }
 $vm | Start-VM
 
-$vm = Get-VM -Name $vmname
-"Venter paa Tools"
+$vm = Get-VM -Name $VMName
+Write-Host "Waiting for VMTools"
 while ($vm.Guest.ExtensionData.ToolsRunningStatus -ne "guestToolsRunning") {
     Write-Host "." -NoNewline
     Start-Sleep -Seconds 2
-    $vm = Get-VM -Name $vmname
+    $vm = Get-VM -Name $VMName
 }
 Write-Host ""
 
-"Tools oppe, venter paa hostnavn"
+Write-Host "VMTools running, waiting for hostname"
 while ($vm.Guest.HostName.Length -eq 0) {
     Write-Host "." -NoNewline
     Start-Sleep -Seconds 2
-    $vm = Get-VM -Name $vmname
+    $vm = Get-VM -Name $VMName
 }
-"Hostnavn fundet"
-"Genstarter for at fjerne cdrom"
+Write-Host "Hostname found"
+Write-Host "Rebooting for removal of CDROM drive."
 $vm | Shutdown-VMGuest -Confirm:$false
 while ($vm.PowerState -ne "PoweredOff") {
     Write-Host "." -NoNewline
     Start-Sleep -Seconds 2
-    $vm = Get-VM -Name $vmname
+    $vm = Get-VM -Name $VMName
 }
 $vm | Get-CDDrive | Set-CDDrive -NoMedia -Confirm:$false -StartConnected:$false
 
 $vm | Start-VM
 
 $vm = Get-VM -Name $vmname
-"Venter paa Tools"
+Write-Host "Waiting for VMTools"
 while ($vm.Guest.ExtensionData.ToolsRunningStatus -ne "guestToolsRunning") {
     Write-Host "." -NoNewline
     Start-Sleep -Seconds 2
-    $vm = Get-VM -Name $vmname
+    $vm = Get-VM -Name $VMName
 }
 Write-Host ""
 
-"Tools oppe, venter paa hostnavn"
+Write-Host "VMTools running, waiting for hostname"
 while ($vm.Guest.HostName.Length -eq 0) {
     Write-Host "." -NoNewline
     Start-Sleep -Seconds 2
-    $vm = Get-VM -Name $vmname
+    $vm = Get-VM -Name $VMName
 }
-"Hostnavn fundet"
 
-Get-VM -Name $vmname | Select-Object -ExpandProperty Guest | Format-List *
+Get-VM -Name $VMName | Select-Object -ExpandProperty Guest | Format-List *
 Remove-Item -Path $vmcdfolder -Recurse -Force -Confirm:$false
 Remove-Item -Path $vmisofile -Force -Confirm:$false
 # todo:
