@@ -2,85 +2,70 @@
 param (
     [Parameter()]
     [string]
-    $OVFPath = $env:OVFPath ,
+    $OVFPath,
     [Parameter()]
     [string]
-    $VMName = $env:VMNAME,
+    $VMName,
     [Parameter()]
     [string]
-    $VMUsername = $env:VMUSERNAME,
+    $VMUsername,
     [Parameter()]
     [string]
-    $VMUserPublicKey = $env:VMUSERPUBLICKEY,
+    $VMUserPublicKey,
     [Parameter()]
     [string]
-    $VMUserFallbackPW = $env:VMUSERFALLBACKPW,
+    $VMUserFallbackPW,
     [Parameter()]
     [int]
-    $VMDiskSizeGB = $env:VMDISKSIZEGB,
+    $VMDiskSizeGB,
     [Parameter()]
     [int]
-    $VMMemoryGB = $env:VMMEMORYGB,
+    $VMMemoryGB,
     [Parameter()]
     [string]
-    $VMDataStoreName = $env:VMDATASTORENAME,
+    $VMDataStoreName,
     [Parameter()]
     [string]
-    $ESXHost = $env:ESXHOST,
+    $ESXHost,
     [Parameter()]
     [string]
-    $ESXUsername = $env:ESXUSERNAME,
+    $ESXUsername,
     [Parameter()]
     [string]
-    $ESXUserPW = $env:ESXUSERPW,
+    $ESXUserPW,
     [Parameter()]
     [string]
-    $ESXCloudInitDataStoreName = $env:ESXCLOUDINITDATASTORENAME
+    $ESXCloudInitDataStoreName
 
 
 
     
 )
 
+
 $ParameterList = (Get-Command -Name $MyInvocation.InvocationName).Parameters
 foreach ( $ParameterKey in $ParameterList.Keys ) {
     $ParameterValue = (Get-Variable $ParameterKey -ErrorAction SilentlyContinue)
     if ($null -ne $ParameterValue) {
         if ($ParameterValue.Value -eq "") { 
-            # Evt. lav tjek for env her, så behøver man dem ikke i toppen.
-            Write-Host "Missing argument or environment variable: $ParameterKey"
-            exit 1
+            $EnvVar = Get-Item -Path env:$ParameterKey -ErrorAction Ignore
+            if ($null -ne $EnvVar) {
+                set-Variable -Name "$($ParameterKey)" -Value $EnvVar.Value
+            }
+            else {
+                Write-Host "Missing argument or environment variable: $ParameterKey"
+                exit 1
+            }
         }
     }
 }
 
     
-    
+if (-not (Test-Path -Path $OVFPath)) {
+    Write-Error "OVF file ($($OVFPath)) not found!"
+    return 1
+}
 
-
-return
-
-<#
-Disse ting skal sættes som env for at den bliver mere docker venlig.
-$OVFPath
-    Husk at tjekke for om filen er der.
-$VMNName
-$VMUsername
-$VMUserPublicKey
-$VMUserFallbackPW
-$VMDiskSizeGB
-$VMMemoryGB
-$VMDataStoreName
-$ESXHost
-    Tjek for forbindelse.
-$ESXUser
-$ESXPW
-$ESXCloudInitDataStoreName
-
-Skift til US.
-
-#>
-$ovfPath = ".\ubuntu-bionic-18.04-cloudimg.ovf"
 
 Connect-VIServer -Server $ESXHost -User $ESXUsername -Password $ESXUserPW
 ## Tjek for fejl.
