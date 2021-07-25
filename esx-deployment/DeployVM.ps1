@@ -67,8 +67,13 @@ if (-not (Test-Path -Path $OVFPath)) {
 }
 
 
-Connect-VIServer -Server $ESXHost -User $ESXUsername -Password $ESXUserPW -Force
-## Tjek for fejl.
+$viserver = $null
+$viserver = Connect-VIServer -Server $ESXHost -User $ESXUsername -Password $ESXUserPW -Force -ErrorAction Ignore
+if($null -eq $viserver){
+    Write-Host "Error in connection to ESX host."
+    return
+}
+
 
 $DirectorySeparator = $([IO.Path]::DirectorySeparatorChar)
 $vmcdfolder = "$($pwd.path)$($DirectorySeparator)$VMName-cd"
