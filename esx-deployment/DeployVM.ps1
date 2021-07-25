@@ -67,7 +67,7 @@ if (-not (Test-Path -Path $OVFPath)) {
 }
 
 
-Connect-VIServer -Server $ESXHost -User $ESXUsername -Password $ESXUserPW
+Connect-VIServer -Server $ESXHost -User $ESXUsername -Password $ESXUserPW -Force
 ## Tjek for fejl.
 
 $DirectorySeparator = $([IO.Path]::DirectorySeparatorChar)
