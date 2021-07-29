@@ -106,10 +106,10 @@ Import-VApp $ovfPath -Name $vmname  -VMHost (Get-VMHost) -Datastore $VMDS -Locat
 # todo: her skal man bruge id eller noget.
 $vm = Get-VM -Name $vmname
 $vm | Get-CDDrive | Set-CDDrive -IsoPath "[$($SSD.Name)] cloud-init\$VMName-seed.iso" -Confirm:$false -StartConnected:$true
-if ($diskSizeGB -ge 10) {
+if ($VMDiskSizeGB -ge 10) {
     $vm | Get-HardDisk | Set-HardDisk -CapacityGB $VMDiskSizeGB -Confirm:$false
 }
-if ($memoryGB -ge 1) {
+if ($VMMemoryGB -ge 1) {
     $vm | VMware.VimAutomation.Core\Set-VM -MemoryGB $VMMemoryGB -Confirm:$false
 }
 $vm | Start-VM
