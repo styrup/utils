@@ -5,8 +5,8 @@ ethernets:
       name: ens192
     dhcp4: false
     addresses:
-      - CIIP/24
-    gateway4: 10.0.0.1
+      - CIIP/CINETMASK
+    gateway4: CIGATEWAY
     nameservers:
-      search: [skelnet.lan]
-      addresses: [10.0.0.53]
+      search: [CIDNSSEARCH]
+      addresses: [CIDNS]

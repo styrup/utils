@@ -35,13 +35,23 @@ param (
     $ESXUserPW,
     [Parameter()]
     [string]
-    $ESXCloudInitDataStoreName
-
-
-
-    
+    $ESXCloudInitDataStoreName,
+    [Parameter()]
+    [string]
+    $VMIP = "DHCP",
+    [Parameter()]
+    [string]
+    $VMIPCIDR = "DHCP",
+    [Parameter()]
+    [string]
+    $VMGateway = "DHCP",
+    [Parameter()]
+    [string]
+    $VMDNSIP = "DHCP",
+    [Parameter()]
+    [string]
+    $VMDNSSearch = "DHCP"
 )
-$VMIP = "10.0.0.231"
 
 $ParameterList = (Get-Command -Name $MyInvocation.InvocationName).Parameters
 foreach ( $ParameterKey in $ParameterList.Keys ) {
@@ -88,11 +98,16 @@ mkdir $vmcdfolder
 
 $userData = Get-Content .\user-data-template
 $newUSerData = $userData | ForEach-Object { $_ -replace "CIHOSTNAME", $VMName -replace "CIPASSWORD", $VMUserFallbackPW -replace "CIUSER", $VMUsername -replace "CIKEY", $VMUserPublicKey }
+Write-Host "Userdata"
+Write-Host $newUSerData
 [IO.File]::WriteAllLines($userdatafile, $newUSerData)
-
-$networkData = Get-Content .\network-config.yml
-$newNetworkData = $networkData | ForEach-Object { $_ -replace "CIIP", $VMIP }
-[IO.File]::WriteAllLines($networkdatafile, $newNetworkData)
+if ($VMIP -ne "DHCP") {
+    $networkData = Get-Content .\network-config.yml
+    $newNetworkData = $networkData | ForEach-Object { $_ -replace "CIIP", $VMIP -replace "CINETMASK", $VMIPCIDR -replace "CIGATEWAY", $VMGateway -replace "CIDNSSEARCH", $VMDNSSearch -replace "CIDNS", $VMDNSIP }
+    Write-Host "Network:"
+    Write-Host $newNetworkData
+    [IO.File]::WriteAllLines($networkdatafile, $newNetworkData)
+}
 
 
 $dataSrcFolder = "$vmcdfolder$($DirectorySeparator)"
