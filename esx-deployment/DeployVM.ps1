@@ -41,7 +41,7 @@ param (
 
     
 )
-
+$VMIP = "10.0.0.231"
 
 $ParameterList = (Get-Command -Name $MyInvocation.InvocationName).Parameters
 foreach ( $ParameterKey in $ParameterList.Keys ) {
@@ -69,7 +69,7 @@ if (-not (Test-Path -Path $OVFPath)) {
 
 $viserver = $null
 $viserver = Connect-VIServer -Server $ESXHost -User $ESXUsername -Password $ESXUserPW -Force -ErrorAction Ignore
-if($null -eq $viserver){
+if ($null -eq $viserver) {
     Write-Host "Error in connection to ESX host."
     return
 }
@@ -80,6 +80,7 @@ $vmcdfolder = "$($pwd.path)$($DirectorySeparator)$VMName-cd"
 $vmisofile = "$($pwd.path)$($DirectorySeparator)$VMName-seed.iso"
 $metadatafile = "$vmcdfolder$($DirectorySeparator)meta-data"
 $userdatafile = "$vmcdfolder$($DirectorySeparator)user-data"
+$networkdatafile = "$vmcdfolder$($DirectorySeparator)network-config"
 
 mkdir $vmcdfolder
 "instance-id: iid-local01" | Out-File -FilePath $metadatafile -Encoding utf8 -Append
@@ -88,6 +89,10 @@ mkdir $vmcdfolder
 $userData = Get-Content .\user-data-template
 $newUSerData = $userData | ForEach-Object { $_ -replace "CIHOSTNAME", $VMName -replace "CIPASSWORD", $VMUserFallbackPW -replace "CIUSER", $VMUsername -replace "CIKEY", $VMUserPublicKey }
 [IO.File]::WriteAllLines($userdatafile, $newUSerData)
+
+$networkData = Get-Content .\network-config.yml
+$newNetworkData = $networkData | ForEach-Object { $_ -replace "CIIP", $VMIP }
+[IO.File]::WriteAllLines($networkdatafile, $newNetworkData)
 
 
 $dataSrcFolder = "$vmcdfolder$($DirectorySeparator)"
