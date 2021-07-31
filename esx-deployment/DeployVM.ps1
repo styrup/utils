@@ -38,19 +38,19 @@ param (
     $ESXCloudInitDataStoreName,
     [Parameter()]
     [string]
-    $VMIP = "DHCP",
+    $VMIP,
     [Parameter()]
     [string]
-    $VMIPCIDR = "DHCP",
+    $VMIPCIDR,
     [Parameter()]
     [string]
-    $VMGateway = "DHCP",
+    $VMGateway,
     [Parameter()]
     [string]
-    $VMDNSIP = "DHCP",
+    $VMDNSIP,
     [Parameter()]
     [string]
-    $VMDNSSearch = "DHCP"
+    $VMDNSSearch
 )
 
 $ParameterList = (Get-Command -Name $MyInvocation.InvocationName).Parameters
@@ -70,7 +70,6 @@ foreach ( $ParameterKey in $ParameterList.Keys ) {
     }
 }
 
-    
 if (-not (Test-Path -Path $OVFPath)) {
     Write-Error "OVF file ($($OVFPath)) not found!"
     return 1
