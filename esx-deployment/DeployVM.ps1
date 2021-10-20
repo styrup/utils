@@ -131,6 +131,9 @@ if ($VMDiskSizeGB -ge 10) {
 if ($VMMemoryGB -ge 1) {
     $vm | VMware.VimAutomation.Core\Set-VM -MemoryGB $VMMemoryGB -Confirm:$false
 }
+
+Get-FloppyDrive -VM $vm | Remove-FloppyDrive -Confirm:$false
+
 $vm | Start-VM
 
 $vm = Get-VM -Name $VMName
